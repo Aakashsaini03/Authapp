@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-
 import { AuthModule } from './Auth/auth.module';
 import { User } from './users/user.entity';
+import { RabbitmqModule } from './rabbitmq/rabbitmq.module';
 
 @Module({
   imports: [
@@ -23,6 +23,8 @@ import { User } from './users/user.entity';
     }),
 
     AuthModule,
+
+    RabbitmqModule,
   ],
 })
 export class AppModule {}
