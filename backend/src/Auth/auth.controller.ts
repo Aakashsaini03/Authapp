@@ -1,9 +1,21 @@
-import { Body, Controller, Post, Res,Get,Req,UnauthorizedException,} from '@nestjs/common';
-import type { Response ,Request} from 'express';
-import { AuthService } from './auth.service';
+import {
+  Body,
+  Controller,
+  Post,
+  Res,
+  Get,
+  Req,
+  UnauthorizedException,
+} from '@nestjs/common';
+import type { Response, Request } from 'express';
+import {AuthService} from './auth.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
-
+import { UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from './guards/guard';
+import {RolesGuard} from '../guards/roles/roles.guard';
+import { Roles } from '../guards/roles/roles.decorator';
+import { Role } from 'src/guards/roles/roles.enum';
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
@@ -26,21 +38,35 @@ signup(@Body() signupDto: SignupDto) {
       secure: false,
       sameSite: 'lax',
       maxAge: 24 * 60 * 60 * 1000,
+      path: '/',
     });
 
     return {
       message: 'Login Successful',
+      token:result.token,
       user: result.user,
     };
   }
 
-  @Get()
-  getall(){
-    return this.authService.getAlldata();
+  // @Get()
+  // getall(){
+  //   return this.authService.getAlldata();
+  // }
+
+  private extractToken(request: Request): string | null {
+    const authHeader = request.headers.authorization;
+
+    if (authHeader?.startsWith('Bearer ')) {
+      return authHeader.substring(7).trim();
+    }
+
+    return request.cookies?.token ?? null;
   }
+@UseGuards(JwtAuthGuard)
   @Get('profile')
-  async getProfile(@Req() req: Request) {
-    const token = req.cookies?.token;
+   
+  async getProfile(@Req() request: Request) {
+    const token = this.extractToken(request);
 
     if (!token) {
       throw new UnauthorizedException('Token not found');
@@ -48,22 +74,35 @@ signup(@Body() signupDto: SignupDto) {
 
     return this.authService.getProfile(token);
   }
-   
-  @Post('logout')
-   async logout(
-    @Req() req:Request,
-    @Res({ passthrough: true }) res: Response) {
-      const token=req.cookies?.token;
-       if (token) {
-      await this.authService.logout(token);
-    }
-    res.clearCookie('token');
-    
-
-
-
+@UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Get('admin-data')
+  createUser() {
     return {
-      message: 'Logout successful',
+      message: 'get the admin data',
     };
   }
+  @Post('logout')
+  async logout(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const token = this.extractToken(request);
+
+    if (!token) {
+      throw new UnauthorizedException('Token not found');
+    }
+
+    const result = await this.authService.logout(token);
+
+    response.clearCookie('token', {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      path: '/',
+    });
+
+    return result;
+  }
 }
+

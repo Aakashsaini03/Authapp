@@ -31,7 +31,6 @@ function Login() {
     const data = await res.json();
 
     if (res.ok) {
-      alert(data.message);
       navigate('/dashboard');
     } else {
       alert(data.message || 'Login failed');

@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 
 import { User } from '../users/user.entity';
 import { SignupDto } from './dto/signup.dto';
@@ -20,6 +21,7 @@ export class AuthService {
     private userRepository: Repository<User>,
 
     private jwtService: JwtService,
+    private configService: ConfigService,
   ) {}
 
   async signup(signupDto: SignupDto) {
@@ -68,10 +70,13 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    const token = this.jwtService.sign({
-      id: user.id,
-      email: user.email,
-    });
+    const token = this.jwtService.sign(
+      {
+        sub: user.id,
+        email: user.email,
+      },
+      
+    );
 
     await redisClient.set(
       `auth:${token}`,
@@ -81,7 +86,7 @@ export class AuthService {
         name: user.name,
       }),
       'EX',
-      300,
+      60*60,
     );
 
     return {
@@ -112,12 +117,25 @@ export class AuthService {
 
   async getProfile(token: string) {
     try {
-      const payload = this.jwtService.verify(token);
+      const payload = this.jwtService.decode(token) as
+        | { sub?: string; email?: string }
+        | null;
+
+      if (!payload?.sub || !payload?.email) {
+        throw new UnauthorizedException('Invalid or expired token');
+      }
 
       const redisData = await redisClient.get(`auth:${token}`);
 
       if (!redisData) {
-        throw new UnauthorizedException('Session expired or logged out');
+        return {
+          message: 'Profile data fetched successfully',
+          user: {
+            id: payload.sub,
+            email: payload.email,
+          },
+          tokenPayload: payload,
+        };
       }
 
       return {
@@ -126,6 +144,9 @@ export class AuthService {
         tokenPayload: payload,
       };
     } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
       throw new UnauthorizedException('Invalid or expired token');
     }
   }
@@ -134,7 +155,7 @@ export class AuthService {
     await redisClient.del(`auth:${token}`);
 
     return {
-      message: 'Logout successful and token remove',
+      message: 'Logout successful and token removed',
     };
   }
 }

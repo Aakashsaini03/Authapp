@@ -3,9 +3,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './Auth/auth.module';
 import { User } from './users/user.entity';
 import { RabbitmqModule } from './rabbitmq/rabbitmq.module';
+import { AuthController } from './Auth/auth.controller';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  imports: [
+  imports: [ConfigModule.forRoot({
+    isGlobal:true
+  }),
     TypeOrmModule.forRoot({
       type: 'mssql',
       host: 'localhost',
@@ -26,5 +30,6 @@ import { RabbitmqModule } from './rabbitmq/rabbitmq.module';
 
     RabbitmqModule,
   ],
+  
 })
 export class AppModule {}

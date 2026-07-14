@@ -1,16 +1,25 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+
+type User = {
+  id: number;
+  name: string;
+  email: string;
+};
+
 function Dashboard() {
   const navigate = useNavigate();
-
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
 
   const getProfile = async () => {
     try {
-      const res = await fetch('http://localhost:3000/auth/profile', {
-        method: 'GET',
-        credentials: 'include',
-      });
+      const res = await fetch(
+        'http://localhost:3000/auth/profile',
+        {
+          method: 'GET',
+          credentials: 'include',
+        },
+      );
 
       const data = await res.json();
       console.log(data);
@@ -31,17 +40,24 @@ function Dashboard() {
   useEffect(() => {
     getProfile();
   }, []);
+
   const handleLogout = async () => {
     try {
-      const res = await fetch('http://localhost:3000/auth/logout', {
-        method: 'POST',
-        credentials: 'include',
-      });
+      const res = await fetch(
+        'http://localhost:3000/auth/logout',
+        {
+          method: 'POST',
+          credentials: 'include',}
+      );
 
       const data = await res.json();
 
-      alert(data.message);
-      navigate('/login');
+      if (res.ok) {
+        alert(data.message);
+        navigate('/login');
+      } else {
+        alert(data.message || 'Logout failed');
+      }
     } catch (error) {
       console.log(error);
       alert('Logout failed');
@@ -53,8 +69,14 @@ function Dashboard() {
       <div style={styles.card}>
         <h2>Dashboard</h2>
 
-        <p>Welcome, {user?.name}</p>
-        <p>Email: {user?.email}</p>
+        {!user ? (
+          <p>Loading...</p>
+        ) : (
+          <>
+            <p>Welcome, {user.name}</p>
+            <p>Email: {user.email}</p>
+          </>
+        )}
 
         <button onClick={handleLogout} style={styles.button}>
           Logout
