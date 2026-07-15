@@ -25,8 +25,8 @@ export class RolesGuard implements CanActivate {
     if(!user)
        throw new ForbiddenException('User information not found');
 
-    const userroles:string[] =user.roles??[];
-    const allowed =requiredRoles.some((role)=>userroles.includes(role),);
+    
+    const allowed =requiredRoles.some((role) => user.roles?.includes(role));
     if(!allowed)
       throw new ForbiddenException('You do not have permission to access this route')
     return true;

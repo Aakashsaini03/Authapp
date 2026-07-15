@@ -25,7 +25,7 @@ export class AuthService {
   ) {}
 
   async signup(signupDto: SignupDto) {
-    const { name, email, password } = signupDto;
+    const { name, email,role, password } = signupDto;
 
     const existingUser = await this.userRepository.findOne({
       where: { email },
@@ -41,6 +41,8 @@ export class AuthService {
       name,
       email,
       password: hashedPassword,
+      role
+      
     });
 
     await this.userRepository.save(user);
@@ -51,10 +53,10 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    const { email, password } = loginDto;
+    const { email, role,password } = loginDto;
 
     const user = await this.userRepository.findOne({
-      where: { email },
+      where: { email,},
     });
 
     if (!user) {
@@ -72,8 +74,9 @@ export class AuthService {
 
     const token = this.jwtService.sign(
       {
-        sub: user.id,
+        sub: user.UniqueId,
         email: user.email,
+        role: user.role,
       },
       
     );
@@ -81,9 +84,10 @@ export class AuthService {
     await redisClient.set(
       `auth:${token}`,
       JSON.stringify({
-        id: user.id,
+        UniqueId: user.UniqueId,
         email: user.email,
         name: user.name,
+        role: user.role,
       }),
       'EX',
       60*60,
@@ -93,9 +97,10 @@ export class AuthService {
       message: 'Login successful',
       token,
       user: {
-        id: user.id,
+        UniqueId: user.UniqueId,
         name: user.name,
         email: user.email,
+        role: user.role,
       },
     };
   }
@@ -103,9 +108,10 @@ export class AuthService {
   async getAlldata() {
     const users = await this.userRepository.find({
       select: {
-        id: true,
+        UniqueId: true,
         name: true,
         email: true,
+        role: true,
       },
     });
 
@@ -115,10 +121,24 @@ export class AuthService {
     };
   }
 
+ async getAdminUsers(): Promise<User[]> {
+  return await this.userRepository.find({
+    where: {
+      role: 'admin',
+    },
+    select: {
+        UniqueId: true,
+        name: true,
+        email: true,
+        role: true,
+      },
+  });
+}
+
   async getProfile(token: string) {
     try {
       const payload = this.jwtService.decode(token) as
-        | { sub?: string; email?: string }
+        | { sub?: string; email?: string ;role?: string }
         | null;
 
       if (!payload?.sub || !payload?.email) {
@@ -131,8 +151,9 @@ export class AuthService {
         return {
           message: 'Profile data fetched successfully',
           user: {
-            id: payload.sub,
+            UniqueId: payload.sub,
             email: payload.email,
+            role: payload.role,
           },
           tokenPayload: payload,
         };

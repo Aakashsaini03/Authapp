@@ -11,6 +11,10 @@ export class SignupDto {
   @IsEmail()
   email!: string;
 
+  @IsString()
+  role!: string;
+
+
   @MinLength(6)
   password!: string;
 }

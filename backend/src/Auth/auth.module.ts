@@ -10,6 +10,7 @@ import { User } from '../users/user.entity';
 import { JwtStrategy } from './guards/guards.strategy';
 import { JwtAuthGuard } from './guards/guard';
 import { RolesGuard } from '../guards/roles/roles.guard';
+import { PermissionsGuard } from 'src/claim-based-guard/claim-based-guard.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { RolesGuard } from '../guards/roles/roles.guard';
     JwtStrategy,
     JwtAuthGuard,
     RolesGuard,
+    PermissionsGuard,
   ],
 
   

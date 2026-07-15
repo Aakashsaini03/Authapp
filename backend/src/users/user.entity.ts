@@ -8,7 +8,7 @@ import { Role } from '../guards/roles/roles.enum';
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
-  id!: string;
+  UniqueId!: string;
 
   @Column({ type: 'nvarchar', length: 50 })
   name!: string;
@@ -23,6 +23,10 @@ export class User {
   @Column({ type: 'nvarchar', length: 200 })
   password!: string;
 
-  @Column('simple-array', { default: Role.USER })
-  roles!: Role[];
+  @Column({
+  type: 'nvarchar',
+  length: 50,
+  default: 'user',
+})
+role!: string;
 }
