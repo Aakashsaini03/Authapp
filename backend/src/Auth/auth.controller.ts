@@ -1,13 +1,5 @@
 import {
-  Body,
-  Controller,
-  Post,
-  Res,
-  Get,
-  Req,
-  UnauthorizedException,
-  Param,
-  Query,
+  Body,Controller,Post,Res,Get,Req,UnauthorizedException,
 } from '@nestjs/common';
 import type { Response, Request } from 'express';
 import {AuthService} from './auth.service';
@@ -15,23 +7,38 @@ import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from './guards/guard';
-import {RolesGuard} from '../guards/roles/roles.guard';
-import { Roles } from '../guards/roles/roles.decorator';
-import { Role } from 'src/guards/roles/roles.enum';
-import{PermissionsGuard} from '../claim-based-guard/claim-based-guard.module';
-import{permissions} from '../claim-based-guard/guard.enum';
-import{RequirePermissions} from '../claim-based-guard/guards.decorator';
+import {RolesGuard} from './guards/roles/roles.guard';
+import { Roles } from './guards/roles/roles.decorator';
+import { Role } from './guards/roles/roles.enum';
+import{PermissionsGuard} from './guards/claim-based/claim-based-guard';
+import{Permission} from './guards/claim-based/permission.enum';
+import{RequirePermissions} from './guards/claim-based/permission.decorator';
+import { LOGIN_SUCCESS,TOKEN_NOT_FOUND } from 'src/constant/auth.constant';
+import { minutes, seconds, SkipThrottle,Throttle} from '@nestjs/throttler';
+import{LLIMIT,SLIMIT,LTTL,STTL} from 'src/constant/rate_limit_constant'
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
  @Post('signup')
-signup(@Body() signupDto: SignupDto) {
-  console.log('Signup body:', signupDto);
-  return this.authService.signup(signupDto);
+ @Throttle({
+  default:{
+    limit:SLIMIT,
+    ttl:STTL
+  }
+ })
+   signup(@Body() signupDto: SignupDto) {
+   console.log('Signup body:', signupDto);
+   return this.authService.signup(signupDto);
 }
 
   @Post('login')
+  @Throttle({
+    default:{
+      limit:LLIMIT,
+      ttl:LTTL
+    }
+  })
   async login(
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) res: Response,
@@ -42,14 +49,15 @@ signup(@Body() signupDto: SignupDto) {
       httpOnly: true,
       secure: false,
       sameSite: 'lax',
-      maxAge: 24 * 60 * 60 * 1000,
+      maxAge:24 * 60 * 60 * 1000,
       path: '/',
     });
 
     return {
-      message: 'Login Successful',
+      message: LOGIN_SUCCESS,
       token:result.token,
       user: result.user,
+      requestTime: Req['requestTime'],
     };
   }
 
@@ -68,27 +76,30 @@ signup(@Body() signupDto: SignupDto) {
     return request.cookies?.token ?? null;
   }
 @UseGuards(JwtAuthGuard)
-  @Get('profile')
+@Get('profile')
    
   async getProfile(@Req() request: Request) {
     const token = this.extractToken(request);
 
     if (!token) {
-      throw new UnauthorizedException('Token not found');
+      throw new UnauthorizedException(TOKEN_NOT_FOUND);
     }
 
     return this.authService.getProfile(token);
   }
+
+
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @Get('admin-data')
-  createUser() {
+  getAdminData() {
    return this.authService.getAdminUsers();
+   
   }
 
 
   @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @RequirePermissions(permissions.Read)
+  @RequirePermissions(Permission.Read)
   @Get('permission')
   getUsers() {
     return 'User list';
@@ -96,26 +107,8 @@ signup(@Body() signupDto: SignupDto) {
 
 
   @Post('logout')
-  async logout(
-    @Req() request: Request,
-    @Res({ passthrough: true }) response: Response,
-  ) {
-    const token = this.extractToken(request);
-
-    if (!token) {
-      throw new UnauthorizedException('Token not found');
-    }
-
-    const result = await this.authService.logout(token);
-
-    response.clearCookie('token', {
-      httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
-      path: '/',
-    });
-
-    return result;
+   logout() {
+    return 'logout sucessfully';
   }
 }
 

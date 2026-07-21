@@ -2,17 +2,26 @@ import {
   Injectable,
   BadRequestException,
   UnauthorizedException,
+  Req,Res
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-
 import { User } from '../users/user.entity';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import { redisClient } from '../redis.provider';
+import { EMAIL_EXISTS,USER_REGISTERED_SUCCESS,INVALID_EMAIL ,
+  PASSWORD_MISMATCH,USER_FETCH_SUCCESS, INVALID_TOKEN,LOGIN_SUCCESS,
+  PROFILE_FETCH_SUCCESS,LOGOUT_SUCCESS,
+  SESSION_EXPIRED
+} from 'src/constant/auth.constant';
+import { Permission } from './guards/claim-based/permission.enum';
+import { Role } from './guards/roles/roles.enum';
+import { response } from 'express';
+
 
 @Injectable()
 export class AuthService {
@@ -25,21 +34,21 @@ export class AuthService {
   ) {}
 
   async signup(signupDto: SignupDto) {
-    const { name, email,role, password } = signupDto;
+    const { name, Gmail,role, password } = signupDto;
 
     const existingUser = await this.userRepository.findOne({
-      where: { email },
+      where: { Gmail},
     });
 
     if (existingUser) {
-      throw new BadRequestException('Email already exists');
+      throw new BadRequestException(EMAIL_EXISTS);
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = this.userRepository.create({
       name,
-      email,
+      Gmail,
       password: hashedPassword,
       role
       
@@ -48,19 +57,19 @@ export class AuthService {
     await this.userRepository.save(user);
 
     return {
-      message: 'User registered successfully',
+      message: USER_REGISTERED_SUCCESS,
     };
   }
 
   async login(loginDto: LoginDto) {
-    const { email, role,password } = loginDto;
+    const { Gmail, role,password } = loginDto;
 
     const user = await this.userRepository.findOne({
-      where: { email,},
+      where: { Gmail},
     });
 
     if (!user) {
-      throw new UnauthorizedException('Invalid email or password');
+      throw new UnauthorizedException(INVALID_EMAIL);
     }
 
     const isPasswordMatched = await bcrypt.compare(
@@ -69,38 +78,56 @@ export class AuthService {
     );
 
     if (!isPasswordMatched) {
-      throw new UnauthorizedException('Invalid email or password');
+      throw new UnauthorizedException(PASSWORD_MISMATCH);
     }
+    let userPermissions: Permission[] = [];
 
-    const token = this.jwtService.sign(
-      {
-        sub: user.UniqueId,
-        email: user.email,
-        role: user.role,
-      },
-      
-    );
+  if (user.role === Role.ADMIN) {
+    userPermissions = [
+      Permission.Read,
+      Permission.Create,
+      Permission.Update,
+      Permission.Delete,
+    ];
+  } else if (user.role=== Role.USER){
+    userPermissions = [Permission.Read,
+      Permission.Create,
+    ];
+  }
+  else{
+    userPermissions = [Permission.Read];
+  }
+  const payload = {
+      sub: user.UniqueId,
+      Gmail: user.Gmail,
+      role: user.role,
+      permissions: userPermissions,
+    };
+    const token = this.jwtService.sign( payload);
 
     await redisClient.set(
       `auth:${token}`,
       JSON.stringify({
         UniqueId: user.UniqueId,
-        email: user.email,
+        Gmail: user.Gmail,
         name: user.name,
         role: user.role,
+        permissions: userPermissions,
       }),
       'EX',
-      60*60,
+      24 * 60 * 60,
     );
 
     return {
-      message: 'Login successful',
+      message: LOGIN_SUCCESS,
       token,
       user: {
         UniqueId: user.UniqueId,
         name: user.name,
-        email: user.email,
+        Gmail: user.Gmail,
         role: user.role,
+        permissions: userPermissions,
+        requestTime: Req['requestTime'],
       },
     };
   }
@@ -110,13 +137,14 @@ export class AuthService {
       select: {
         UniqueId: true,
         name: true,
-        email: true,
+        Gmail: true,
         role: true,
+      
       },
     });
 
     return {
-      message: 'Users fetched successfully',
+      message: USER_FETCH_SUCCESS,
       users,
     };
   }
@@ -129,38 +157,37 @@ export class AuthService {
     select: {
         UniqueId: true,
         name: true,
-        email: true,
+        Gmail: true,
         role: true,
+        
       },
   });
 }
 
   async getProfile(token: string) {
+    
     try {
-      const payload = this.jwtService.decode(token) as
-        | { sub?: string; email?: string ;role?: string }
-        | null;
+      const payload = await this.jwtService.verifyAsync<{
+      sub: string;
+      Gmail: string;
+      role: string;
+    }>(token);
+    
 
-      if (!payload?.sub || !payload?.email) {
-        throw new UnauthorizedException('Invalid or expired token');
+      if (!payload?.sub || !payload?.Gmail) {
+        throw new UnauthorizedException( INVALID_TOKEN);
       }
 
       const redisData = await redisClient.get(`auth:${token}`);
 
       if (!redisData) {
-        return {
-          message: 'Profile data fetched successfully',
-          user: {
-            UniqueId: payload.sub,
-            email: payload.email,
-            role: payload.role,
-          },
-          tokenPayload: payload,
-        };
-      }
+      throw new UnauthorizedException(
+       SESSION_EXPIRED,
+      );
+    }
 
       return {
-        message: 'Profile data fetched successfully',
+        message: PROFILE_FETCH_SUCCESS,
         user: JSON.parse(redisData),
         tokenPayload: payload,
       };
@@ -168,15 +195,16 @@ export class AuthService {
       if (error instanceof UnauthorizedException) {
         throw error;
       }
-      throw new UnauthorizedException('Invalid or expired token');
+      throw new UnauthorizedException(INVALID_TOKEN);
     }
   }
 
   async logout(token: string) {
     await redisClient.del(`auth:${token}`);
+     response.clearCookie('token');
 
     return {
-      message: 'Logout successful and token removed',
+      message: LOGOUT_SUCCESS,
     };
   }
 }

@@ -9,7 +9,7 @@ export class SignupDto {
   name!: string;
 
   @IsEmail()
-  email!: string;
+  Gmail!: string;
 
   @IsString()
   role!: string;

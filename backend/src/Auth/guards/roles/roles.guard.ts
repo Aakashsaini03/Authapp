@@ -3,6 +3,8 @@ import { Observable } from 'rxjs';
 import { Reflector } from '@nestjs/core';
 import { Role } from './roles.enum';
 import { ROLES_KEY } from './roles.decorator';
+import{roleConstant} from '../../../constant/guard.constant';
+
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
@@ -22,13 +24,15 @@ export class RolesGuard implements CanActivate {
   const request = context.switchToHttp().getRequest()
 
   const user= request.user;
-    if(!user)
-       throw new ForbiddenException('User information not found');
+  console.log('Required Roles:', requiredRoles);
+  console.log('Request user:', user);
+    if(!user?.role)
+       throw new ForbiddenException(roleConstant.USER_ROLE_NOT_FOUND);
 
     
-    const allowed =requiredRoles.some((role) => user.roles?.includes(role));
+    const allowed =requiredRoles.includes(user.role);
     if(!allowed)
-      throw new ForbiddenException('You do not have permission to access this route')
+      throw new ForbiddenException(roleConstant.NOT_ALLOWED_TO_ACCESS)
     return true;
   }
 }

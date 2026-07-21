@@ -19,11 +19,11 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "typeorm": "typeorm-ts-node-commonjs",
-  "migration:create": "npm run typeorm -- migration:create",
-  "migration:generate": "npm run typeorm -- migration:generate",
-  "migration:run": "npm run typeorm -- migration:run",
-  "migration:show": "npm run typeorm -- migration:show",
-  "migration:revert": "npm run typeorm -- migration:revert"
+    "migration:create": "npm run typeorm -- migration:create",
+    "migration:generate": "npm run typeorm -- migration:generate",
+    "migration:run": "npm run typeorm -- migration:run",
+    "migration:show": "npm run typeorm -- migration:show",
+    "migration:revert": "npm run typeorm -- migration:revert"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -33,6 +33,7 @@
     "@nestjs/microservices": "^11.1.27",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/throttler": "^6.5.0",
     "@nestjs/typeorm": "^11.0.2",
     "amqp-connection-manager": "^5.0.0",
     "amqplib": "^2.0.1",

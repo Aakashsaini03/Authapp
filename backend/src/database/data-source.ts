@@ -12,7 +12,7 @@ const Appdatasource = new DataSource({
     synchronize: false,
     logging: true,
     entities: [User],
-    migrations: [AddRoleToUsers1784121990161],
+    migrations: ['src/database/migrations/*.ts',],
     migrationsRun: true,
     options: {
         encrypt: false,

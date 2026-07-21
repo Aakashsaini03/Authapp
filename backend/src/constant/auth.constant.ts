@@ -1,0 +1,15 @@
+export const TOKEN_NOT_FOUND = 'Token not found';
+export const INVALID_TOKEN = 'Invalid token';
+export const TOKEN_EXPIRED = 'Token expired';
+export const LOGIN_SUCCESS = 'Login successful';
+export const LOGIN_FAILED = 'Login failed';
+export const SIGNUP_SUCCESS = 'Signup successful';
+export const SIGNUP_FAILED = 'Signup failed';
+export const LOGOUT_SUCCESS = 'Logout successful and token removed';
+export const PROFILE_FETCH_SUCCESS = 'Profile data fetched successfully';
+export const USER_FETCH_SUCCESS = 'User data fetched successfully';
+export const EMAIL_EXISTS = 'Email already exists';
+export const USER_REGISTERED_SUCCESS = 'User registered successfully';
+export const INVALID_EMAIL='Invalid email format';
+export const PASSWORD_MISMATCH='Password does not match';
+export const SESSION_EXPIRED= 'Session expired or user is logged out';

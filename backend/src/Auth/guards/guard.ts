@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import{redisClient} from '../../redis.provider';
+import { guardConstant } from '../../constant/guard.constant';
+
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -12,7 +14,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     const jwtValid = await super.canActivate(context);
 
     if (!jwtValid) {
-      throw new UnauthorizedException('Invalid access token');
+      throw new UnauthorizedException(guardConstant.INVALID_TOKEN);
     }
 
     const request = context.switchToHttp().getRequest();
@@ -35,7 +37,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     }
 
     if (!token) {
-      throw new UnauthorizedException('Access token is missing');
+      throw new UnauthorizedException(guardConstant.TOKEN_MISSING);
     }
 
     // Check whether the token session still exists in Redis.
@@ -43,7 +45,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 
     if (!session) {
       throw new UnauthorizedException(
-        'Session expired or user logged out',
+        guardConstant.TOKEN_EXPIRED
       );
     }
 

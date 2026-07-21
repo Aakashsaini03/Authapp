@@ -3,30 +3,32 @@ import {
   PrimaryGeneratedColumn,
   Column,
 } from 'typeorm';
-import { Role } from '../guards/roles/roles.enum';
+
 
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
-  UniqueId!: string;
+  UniqueId: string;
 
   @Column({ type: 'nvarchar', length: 50 })
-  name!: string;
+  name: string;
 
   @Column({
     type: 'nvarchar',
     unique: true,
     length: 50,
   })
-  email!: string;
+  Gmail: string;
 
   @Column({ type: 'nvarchar', length: 200 })
   password!: string;
 
   @Column({
   type: 'nvarchar',
-  length: 50,
-  default: 'user',
+  length: 50
 })
-role!: string;
+role: string;
+
+@Column({name:'signup_at',type:'datetime2',insert:false,update:false})
+ signup_at:Date;
 }

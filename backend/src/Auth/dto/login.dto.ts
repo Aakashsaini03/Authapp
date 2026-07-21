@@ -6,7 +6,7 @@ import {
 
 export class LoginDto {
   @IsEmail()
-  email!: string;
+  Gmail!: string;
 
   @IsString()
   role!:string;
